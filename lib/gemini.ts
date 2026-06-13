@@ -67,7 +67,7 @@ export async function askGemini({ faqCsv, question }: AskGeminiParams): Promise<
       contents: prompt,
       config: {
         temperature: 1.0,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2048,
       },
     });
 
