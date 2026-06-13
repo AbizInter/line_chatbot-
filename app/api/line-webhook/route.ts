@@ -3,6 +3,7 @@ import { validateSignature, messagingApi } from '@line/bot-sdk';
 import type { WebhookEvent } from '@line/bot-sdk';
 import { getFaqCsv } from '@/lib/sheet';
 import { askGemini, DEFAULT_REPLY } from '@/lib/gemini';
+import { getHistory, appendHistory } from '@/lib/history';
 
 const GEMINI_TIMEOUT_MS = 7_000;
 
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
 
       const userMessage = event.message.text;
       const replyToken = event.replyToken;
+      const userId = event.source.userId ?? 'unknown';
       let reply = DEFAULT_REPLY;
 
       try {
@@ -61,11 +63,15 @@ export async function POST(request: NextRequest) {
           console.error('[WEBHOOK] Sheet unavailable:', err instanceof Error ? err.message : err);
         }
 
+        const history = await getHistory(userId);
+
         reply = await withTimeout(
-          askGemini({ faqCsv, question: userMessage }),
+          askGemini({ faqCsv, question: userMessage, history }),
           GEMINI_TIMEOUT_MS,
           'GEMINI',
         );
+
+        appendHistory(userId, userMessage, reply).catch(() => {});
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes('GEMINI_TIMEOUT')) {
