@@ -62,7 +62,7 @@ ${question}
 </question>`;
 }
 
-export async function askGemini({ faqCsv, question }: AskGeminiParams): Promise<string> {
+export async function askGemini({ faqCsv, question, history }: AskGeminiParams): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error('[GEMINI] GEMINI_API_KEY env missing');
