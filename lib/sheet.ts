@@ -32,7 +32,20 @@ function buildFaqCsv(raw: string): string {
   const lines = raw.replace(/\r/g, '').split('\n').filter((l) => l.trim());
   if (lines.length < 2) return '';
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const HEADER_MAP: Record<string, string> = {
+    คำถาม: 'question',
+    คำตอบ: 'answer',
+    หมวด: 'category',
+    หมวดหมู่: 'category',
+    คีย์เวิร์ด: 'keywords',
+    คำค้น: 'keywords',
+    เปิดใช้: 'active',
+    ใช้งาน: 'active',
+  };
+  const headers = parseCsvLine(lines[0]).map((h) => {
+    const trimmed = h.trim();
+    return HEADER_MAP[trimmed] ?? trimmed.toLowerCase();
+  });
   const qi = headers.indexOf('question');
   const ai = headers.indexOf('answer');
   const ci = headers.indexOf('category');
