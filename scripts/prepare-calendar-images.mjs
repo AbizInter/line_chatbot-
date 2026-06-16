@@ -43,16 +43,6 @@ const DESIGNS = [
     file: '2026_ตั้งโต๊ะ-8-แผ่นl_แรงบันดาลใจ_new_Page_01.jpg',
   },
   {
-    slug: 'cat-meaw',
-    folder: 'ปฏิทิน-14-แผ่น-แนวตั้ง_Cat-Meaw',
-    file: 'Preview_Cat-Meaw-1.png',
-  },
-  {
-    slug: 'planner-post-it',
-    folder: 'ปฏิทิน_Planner_Post-it',
-    file: 'Preview_Planner_Post-it.png',
-  },
-  {
     slug: 'capybara',
     folder: 'ปฏิทิน_คาบีบาร่า',
     file: 'AW-ตั้งโต๊ะ 6x8_16p-คาบีบาร่า_Page_01.jpg',
