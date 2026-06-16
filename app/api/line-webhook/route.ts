@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateSignature, messagingApi } from '@line/bot-sdk';
 import type { WebhookEvent } from '@line/bot-sdk';
 import { getFaqCsv } from '@/lib/sheet';
-import { askGemini, DEFAULT_REPLY } from '@/lib/gemini';
+import { askGemini, DEFAULT_REPLY } from '@/lib/openai';
 import { getHistory, appendHistory } from '@/lib/history';
 
-const GEMINI_TIMEOUT_MS = 7_000;
+const AI_TIMEOUT_MS = 7_000;
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -67,15 +67,15 @@ export async function POST(request: NextRequest) {
 
         reply = await withTimeout(
           askGemini({ faqCsv, question: userMessage, history }),
-          GEMINI_TIMEOUT_MS,
-          'GEMINI',
+          AI_TIMEOUT_MS,
+          'OPENAI',
         );
 
         await appendHistory(userId, userMessage, reply);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes('GEMINI_TIMEOUT')) {
-          console.error('[GEMINI_TIMEOUT]', msg);
+        if (msg.includes('OPENAI_TIMEOUT')) {
+          console.error('[OPENAI_TIMEOUT]', msg);
         } else {
           console.error('[WEBHOOK] Processing error:', msg);
         }

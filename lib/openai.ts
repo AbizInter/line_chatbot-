@@ -1,10 +1,10 @@
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import type { ChatMessage } from '@/lib/history';
 
 export const DEFAULT_REPLY =
   'ขออภัยค่ะ ข้อมูลส่วนนี้ยังไม่มีในระบบ เดี๋ยวแอดมินตรวจสอบและติดต่อกลับคุณลูกค้าอีกครั้งนะคะ';
 
-interface AskGeminiParams {
+interface AskAiParams {
   faqCsv: string;
   question: string;
   history?: ChatMessage[];
@@ -68,40 +68,37 @@ ${question}
 </question>`;
 }
 
-export async function askGemini({ faqCsv, question, history }: AskGeminiParams): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+let client: OpenAI | null = null;
+
+export async function askGemini({ faqCsv, question, history }: AskAiParams): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.error('[GEMINI] GEMINI_API_KEY env missing');
+    console.error('[OPENAI] OPENAI_API_KEY env missing');
     return DEFAULT_REPLY;
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  client ??= new OpenAI({ apiKey });
   const prompt = buildPrompt(faqCsv, question, history);
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-      },
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 2048,
     });
 
-    const finishReason = response.candidates?.[0]?.finishReason;
-    const thoughtsTokenCount = response.usageMetadata?.thoughtsTokenCount;
-    const candidatesTokenCount = response.usageMetadata?.candidatesTokenCount;
+    const finishReason = response.choices?.[0]?.finish_reason;
+    console.log('[OPENAI]', { finishReason, usage: response.usage });
 
-    console.log('[GEMINI]', { finishReason, thoughtsTokenCount, candidatesTokenCount });
-
-    if (finishReason === 'MAX_TOKENS') {
-      console.warn('[GEMINI] MAX_TOKENS — returning default reply');
+    if (finishReason === 'length') {
+      console.warn('[OPENAI] MAX_TOKENS — returning default reply');
       return DEFAULT_REPLY;
     }
 
-    const text = response.text?.trim();
+    const text = response.choices?.[0]?.message?.content?.trim();
     if (!text) {
-      console.error('[GEMINI_EMPTY_RESPONSE]');
+      console.error('[OPENAI_EMPTY_RESPONSE]');
       return DEFAULT_REPLY;
     }
 
@@ -109,9 +106,9 @@ export async function askGemini({ faqCsv, question, history }: AskGeminiParams):
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/timeout|ETIMEDOUT|ECONNABORTED|AbortError/i.test(msg)) {
-      console.error('[GEMINI_TIMEOUT]', msg);
+      console.error('[OPENAI_TIMEOUT]', msg);
     } else {
-      console.error('[GEMINI] Error:', msg);
+      console.error('[OPENAI] Error:', msg);
     }
     return DEFAULT_REPLY;
   }
