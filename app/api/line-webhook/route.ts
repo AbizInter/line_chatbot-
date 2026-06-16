@@ -4,6 +4,7 @@ import type { WebhookEvent } from '@line/bot-sdk';
 
 type Message = messagingApi.Message;
 import { getFaqCsv } from '@/lib/sheet';
+import { getDesignSpecsCsv } from '@/lib/designSheet';
 import { askGemini, DEFAULT_REPLY } from '@/lib/openai';
 import { getHistory, appendHistory } from '@/lib/history';
 import { isValidDesignSlug } from '@/lib/calendarCatalog';
@@ -90,10 +91,20 @@ export async function POST(request: NextRequest) {
           console.error('[WEBHOOK] Sheet unavailable:', err instanceof Error ? err.message : err);
         }
 
+        let designSpecsCsv = '';
+        try {
+          designSpecsCsv = await getDesignSpecsCsv();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg !== 'DESIGN_SHEET_NOT_CONFIGURED') {
+            console.error('[WEBHOOK] Design sheet unavailable:', msg);
+          }
+        }
+
         const history = await getHistory(userId);
 
         const rawReply = await withTimeout(
-          askGemini({ faqCsv, question: userMessage, history }),
+          askGemini({ faqCsv, designSpecsCsv, question: userMessage, history }),
           AI_TIMEOUT_MS,
           'OPENAI',
         );
