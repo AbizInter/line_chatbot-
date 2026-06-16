@@ -10,7 +10,7 @@ export interface ChatMessage {
   text: string;
 }
 
-const MAX_MESSAGES = 6; // 3 exchanges
+const MAX_MESSAGES = 12; // 6 exchanges
 const TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export async function getHistory(userId: string): Promise<ChatMessage[]> {
