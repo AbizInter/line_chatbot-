@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateSignature, messagingApi } from '@line/bot-sdk';
 import type { WebhookEvent } from '@line/bot-sdk';
+
+type Message = messagingApi.Message;
 import { getFaqCsv } from '@/lib/sheet';
 import { askGemini, DEFAULT_REPLY } from '@/lib/openai';
 import { getHistory, appendHistory } from '@/lib/history';
+import { isValidDesignSlug } from '@/lib/calendarCatalog';
 
 const AI_TIMEOUT_MS = 7_000;
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? 'https://line-chatbot-gilt.vercel.app';
+const MAX_IMAGES = 3;
+
+const IMAGES_TAG_PATTERN = /\n?\[\[IMAGES:\s*([^\]]*)\]\]\s*$/i;
+
+function extractImageMessages(reply: string): { text: string; images: Message[] } {
+  const match = reply.match(IMAGES_TAG_PATTERN);
+  if (!match) return { text: reply, images: [] };
+
+  const text = reply.slice(0, match.index).trim();
+  const slugs = match[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(isValidDesignSlug)
+    .slice(0, MAX_IMAGES);
+
+  const images: Message[] = slugs.map((slug) => {
+    const url = `${PUBLIC_BASE_URL}/calendars/${slug}.jpg`;
+    return { type: 'image', originalContentUrl: url, previewImageUrl: url };
+  });
+
+  return { text, images };
+}
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -53,7 +79,8 @@ export async function POST(request: NextRequest) {
       const userMessage = event.message.text;
       const replyToken = event.replyToken;
       const userId = event.source.userId ?? 'unknown';
-      let reply = DEFAULT_REPLY;
+      let text = DEFAULT_REPLY;
+      let images: Message[] = [];
 
       try {
         let faqCsv = '';
@@ -65,13 +92,14 @@ export async function POST(request: NextRequest) {
 
         const history = await getHistory(userId);
 
-        reply = await withTimeout(
+        const rawReply = await withTimeout(
           askGemini({ faqCsv, question: userMessage, history }),
           AI_TIMEOUT_MS,
           'OPENAI',
         );
 
-        await appendHistory(userId, userMessage, reply);
+        ({ text, images } = extractImageMessages(rawReply));
+        await appendHistory(userId, userMessage, text);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes('OPENAI_TIMEOUT')) {
@@ -84,7 +112,7 @@ export async function POST(request: NextRequest) {
       try {
         await client.replyMessage({
           replyToken,
-          messages: [{ type: 'text', text: reply }],
+          messages: [{ type: 'text', text }, ...images],
         });
       } catch (err) {
         console.error('[LINE_REPLY_FAILED]', err instanceof Error ? err.message : err);
