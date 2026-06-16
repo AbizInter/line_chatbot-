@@ -12,6 +12,9 @@ export const CALENDAR_CATALOG: CalendarDesign[] = [
   { slug: 'two-tone', name: 'TwoTone' },
   { slug: 'raeng-banda-jai', name: 'แรงบันดาลใจ' },
   { slug: 'capybara', name: 'คาบีบาร่า' },
+  { slug: 'pastel', name: 'Pastel' },
+  { slug: 'jin-noi-lek', name: 'ตั้งโต๊ะจีนน้อย เล่มเล็ก' },
+  { slug: 'jin-noi-yai', name: 'ตั้งโต๊ะจีนน้อย เล่มใหญ่' },
 ];
 
 const VALID_SLUGS = new Set(CALENDAR_CATALOG.map((d) => d.slug));

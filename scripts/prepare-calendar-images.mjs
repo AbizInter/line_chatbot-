@@ -47,6 +47,21 @@ const DESIGNS = [
     folder: 'ปฏิทิน_คาบีบาร่า',
     file: 'AW-ตั้งโต๊ะ 6x8_16p-คาบีบาร่า_Page_01.jpg',
   },
+  {
+    slug: 'pastel',
+    folder: 'Pastel',
+    file: '1.jpg',
+  },
+  {
+    slug: 'jin-noi-lek',
+    folder: 'จีนน้อย เล็ก',
+    file: '1.jpg',
+  },
+  {
+    slug: 'jin-noi-yai',
+    folder: 'จีนน้อย ใหญ่',
+    file: '1.jpg',
+  },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
