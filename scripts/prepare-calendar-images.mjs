@@ -7,61 +7,17 @@ const SOURCE_ROOT =
 const OUT_DIR = path.resolve('public/calendars');
 
 const DESIGNS = [
-  {
-    slug: 'global-festival',
-    folder: '2026_14แผ่น_ชุด Global Festival++',
-    file: 'AW_Global-Festival-2026_Page_01.jpg',
-  },
-  {
-    slug: 'minimal-dark',
-    folder: '2026_14แผ่น_ชุด Minimal DARK++',
-    file: 'AW-MinimalDARK-Optical-illusions_Page_01.jpg',
-  },
-  {
-    slug: 'mu-te-lu',
-    folder: '2026_14แผ่น_ชุด Mu Te Lu++',
-    file: 'AW_Mu-Te-Lu-2026_Page_01.jpg',
-  },
-  {
-    slug: 'phra-racha-nai-duang-jai',
-    folder: '2026_14แผ่น_ชุด พระราชาในดวงใจ++',
-    file: 'aw_Calendar_ในหลวง_Page_01.jpg',
-  },
-  {
-    slug: 'tang-toe-jin-yer',
-    folder: '2026_8แผ่น_ชุด ตั้งโต๊ะจีนเยอะ++',
-    file: '2026-ตั้งโต๊ะ8แผ่น_จีนเยอะ-6x8_Page_01.jpg',
-  },
-  {
-    slug: 'two-tone',
-    folder: '2026_ตั้งโต๊ะ 8 แผ่น_ชุด TwoTone++',
-    file: '2026_ตั้งโต๊ะ-8-แผ่นl_2Tones_Page_01.jpg',
-  },
-  {
-    slug: 'raeng-banda-jai',
-    folder: '2026_ตั้งโต๊ะ 8 แผ่น_แรงบันดาลใจ++',
-    file: '2026_ตั้งโต๊ะ-8-แผ่นl_แรงบันดาลใจ_new_Page_01.jpg',
-  },
-  {
-    slug: 'capybara',
-    folder: 'ปฏิทิน_คาบีบาร่า',
-    file: 'AW-ตั้งโต๊ะ 6x8_16p-คาบีบาร่า_Page_01.jpg',
-  },
-  {
-    slug: 'pastel',
-    folder: 'Pastel',
-    file: '1.jpg',
-  },
-  {
-    slug: 'jin-noi-lek',
-    folder: 'จีนน้อย เล็ก',
-    file: '1.jpg',
-  },
-  {
-    slug: 'jin-noi-yai',
-    folder: 'จีนน้อย ใหญ่',
-    file: '1.jpg',
-  },
+  { slug: 'global-festival',          folder: '2026_14แผ่น_ชุด Global Festival++',        file: '1.jpg' },
+  { slug: 'minimal-dark',             folder: '2026_14แผ่น_ชุด Minimal DARK++',            file: '1.jpg' },
+  { slug: 'mu-te-lu',                 folder: '2026_14แผ่น_ชุด Mu Te Lu++',                file: '1.jpg' },
+  { slug: 'phra-racha-nai-duang-jai', folder: '2026_14แผ่น_ชุด พระราชาในดวงใจ++',         file: '1.jpg' },
+  { slug: 'tang-toe-jin-yer',         folder: '2026_8แผ่น_ชุด ตั้งโต๊ะจีนเยอะ++',         file: '1.jpg' },
+  { slug: 'two-tone',                 folder: '2026_ตั้งโต๊ะ 8 แผ่น_ชุด TwoTone++',       file: '1.jpg' },
+  { slug: 'raeng-banda-jai',          folder: '2026_ตั้งโต๊ะ 8 แผ่น_แรงบันดาลใจ++',      file: '1.jpg' },
+  { slug: 'capybara',                 folder: 'ปฏิทิน_คาบีบาร่า',                         file: '1.png' },
+  { slug: 'pastel',                   folder: 'Pastel',                                    file: '1.jpg' },
+  { slug: 'jin-noi-lek',              folder: 'จีนน้อย เล็ก',                              file: '1.jpg' },
+  { slug: 'jin-noi-yai',              folder: 'จีนน้อย ใหญ่',                              file: '1.jpg' },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

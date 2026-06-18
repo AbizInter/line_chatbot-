@@ -11,6 +11,7 @@ import { isValidDesignSlug } from '@/lib/calendarCatalog';
 
 const AI_TIMEOUT_MS = 7_000;
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? 'https://line-chatbot-gilt.vercel.app';
+const IMAGE_VERSION = 'v20260617b';
 const MAX_IMAGES = 3;
 
 const IMAGES_TAG_PATTERN = /\n?\[\[IMAGES:\s*([^\]]*)\]\]\s*$/i;
@@ -27,7 +28,7 @@ function extractImageMessages(reply: string): { text: string; images: Message[] 
     .slice(0, MAX_IMAGES);
 
   const images: Message[] = slugs.map((slug) => {
-    const url = `${PUBLIC_BASE_URL}/calendars/${slug}.jpg`;
+    const url = `${PUBLIC_BASE_URL}/calendars/${slug}.jpg?${IMAGE_VERSION}`;
     return { type: 'image', originalContentUrl: url, previewImageUrl: url };
   });
 
