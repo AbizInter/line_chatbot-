@@ -9,7 +9,7 @@ import { askGemini, DEFAULT_REPLY } from '@/lib/openai';
 import { getHistory, appendHistory } from '@/lib/history';
 import { isValidDesignSlug } from '@/lib/calendarCatalog';
 
-const AI_TIMEOUT_MS = 7_000;
+const AI_TIMEOUT_MS = 12_000;
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? 'https://line-chatbot-gilt.vercel.app';
 const IMAGE_VERSION = 'v20260617b';
 const MAX_IMAGES = 3;

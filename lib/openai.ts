@@ -92,7 +92,9 @@ function buildUserPrompt(
 
   const catalogLines = CALENDAR_CATALOG.map((d) => `${d.slug}: ${d.name}`).join('\n');
 
-  return `${historySection}<faq>\n${faqCsv}\n</faq>\n\n${designSection}<design_catalog>\n${catalogLines}\n</design_catalog>\n\n<question>\n${question}\n</question>`;
+  const trimmedFaq = faqCsv.split('\n').slice(0, 60).join('\n');
+
+  return `${historySection}<faq>\n${trimmedFaq}\n</faq>\n\n${designSection}<design_catalog>\n${catalogLines}\n</design_catalog>\n\n<question>\n${question}\n</question>`;
 }
 
 let client: OpenAI | null = null;
