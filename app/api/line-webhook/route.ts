@@ -4,19 +4,16 @@ import type { WebhookEvent } from '@line/bot-sdk';
 
 type Message = messagingApi.Message;
 import { getFaqCsv } from '@/lib/sheet';
-import { getDesignSpecsCsv } from '@/lib/designSheet';
+import { getDesignSpecsCsv, getCalendarCatalog, getImageUrl } from '@/lib/designSheet';
 import { askGemini, DEFAULT_REPLY } from '@/lib/openai';
 import { getHistory, appendHistory } from '@/lib/history';
-import { isValidDesignSlug } from '@/lib/calendarCatalog';
 
 const AI_TIMEOUT_MS = 12_000;
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? 'https://line-chatbot-gilt.vercel.app';
-const IMAGE_VERSION = 'v20260617b';
 const MAX_IMAGES = 3;
 
 const IMAGES_TAG_PATTERN = /\n?\[\[IMAGES:\s*([^\]]*)\]\]\s*$/i;
 
-function extractImageMessages(reply: string): { text: string; images: Message[] } {
+async function extractImageMessages(reply: string): Promise<{ text: string; images: Message[] }> {
   const match = reply.match(IMAGES_TAG_PATTERN);
   if (!match) return { text: reply, images: [] };
 
@@ -24,13 +21,18 @@ function extractImageMessages(reply: string): { text: string; images: Message[] 
   const slugs = match[1]
     .split(',')
     .map((s) => s.trim())
-    .filter(isValidDesignSlug)
+    .filter(Boolean)
     .slice(0, MAX_IMAGES);
 
-  const images: Message[] = slugs.map((slug) => {
-    const url = `${PUBLIC_BASE_URL}/calendars/${slug}.jpg?${IMAGE_VERSION}`;
-    return { type: 'image', originalContentUrl: url, previewImageUrl: url };
-  });
+  const images: Message[] = [];
+  for (const slug of slugs) {
+    const url = await getImageUrl(slug);
+    if (url) {
+      images.push({ type: 'image', originalContentUrl: url, previewImageUrl: url });
+    } else {
+      console.warn('[WEBHOOK] Unknown slug in IMAGES tag:', slug);
+    }
+  }
 
   return { text, images };
 }
@@ -93,8 +95,10 @@ export async function POST(request: NextRequest) {
         }
 
         let designSpecsCsv = '';
+        let catalog: { slug: string; name: string }[] = [];
         try {
           designSpecsCsv = await getDesignSpecsCsv();
+          catalog = await getCalendarCatalog();
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (msg !== 'DESIGN_SHEET_NOT_CONFIGURED') {
@@ -105,12 +109,12 @@ export async function POST(request: NextRequest) {
         const history = await getHistory(userId);
 
         const rawReply = await withTimeout(
-          askGemini({ faqCsv, designSpecsCsv, question: userMessage, history }),
+          askGemini({ faqCsv, designSpecsCsv, catalog, question: userMessage, history }),
           AI_TIMEOUT_MS,
           'OPENAI',
         );
 
-        ({ text, images } = extractImageMessages(rawReply));
+        ({ text, images } = await extractImageMessages(rawReply));
         await appendHistory(userId, userMessage, text);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

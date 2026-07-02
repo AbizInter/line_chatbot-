@@ -1,19 +1,5 @@
 import OpenAI from 'openai';
 import type { ChatMessage } from '@/lib/history';
-import { CALENDAR_CATALOG } from '@/lib/calendarCatalog';
-
-const DISCONTINUED_DESIGNS = ['Cat-Meaw', 'Planner Post-it'];
-
-function filterDiscontinued(csv: string): string {
-  const pattern = new RegExp(
-    DISCONTINUED_DESIGNS.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
-    'gi',
-  );
-  return csv
-    .split('\n')
-    .filter((line) => !pattern.test(line))
-    .join('\n');
-}
 
 export const DEFAULT_REPLY =
   'ขออภัยค่ะ ข้อมูลส่วนนี้ยังไม่มีในระบบ เดี๋ยวแอดมินตรวจสอบและติดต่อกลับคุณลูกค้าอีกครั้งนะคะ';
@@ -21,6 +7,7 @@ export const DEFAULT_REPLY =
 interface AskAiParams {
   faqCsv: string;
   designSpecsCsv?: string;
+  catalog?: { slug: string; name: string }[];
   question: string;
   history?: ChatMessage[];
 }
@@ -71,9 +58,12 @@ function buildSystemPrompt(): string {
 function buildUserPrompt(
   faqCsv: string,
   designSpecsCsv: string,
+  catalog: { slug: string; name: string }[],
   question: string,
   history: ChatMessage[] = [],
 ): string {
+  const trimmedFaq = faqCsv.split('\n').slice(0, 60).join('\n');
+
   const historySection =
     history.length === 0
       ? ''
@@ -85,11 +75,11 @@ function buildUserPrompt(
     ? `<design_specs>\n${designSpecsCsv}\n</design_specs>\n\n`
     : '';
 
-  const catalogLines = CALENDAR_CATALOG.map((d) => `${d.slug}: ${d.name}`).join('\n');
+  const catalogSection = catalog.length
+    ? `<design_catalog>\n${catalog.map((d) => `${d.slug}: ${d.name}`).join('\n')}\n</design_catalog>\n\n`
+    : '';
 
-  const trimmedFaq = faqCsv.split('\n').slice(0, 60).join('\n');
-
-  return `${historySection}<faq>\n${trimmedFaq}\n</faq>\n\n${designSection}<design_catalog>\n${catalogLines}\n</design_catalog>\n\n<question>\n${question}\n</question>`;
+  return `${historySection}<faq>\n${trimmedFaq}\n</faq>\n\n${designSection}${catalogSection}<question>\n${question}\n</question>`;
 }
 
 let client: OpenAI | null = null;
@@ -97,6 +87,7 @@ let client: OpenAI | null = null;
 export async function askGemini({
   faqCsv,
   designSpecsCsv = '',
+  catalog = [],
   question,
   history = [],
 }: AskAiParams): Promise<string> {
@@ -108,15 +99,12 @@ export async function askGemini({
 
   client ??= new OpenAI({ apiKey });
 
-  const cleanFaq = filterDiscontinued(faqCsv);
-  const cleanDesign = filterDiscontinued(designSpecsCsv);
-
   try {
     const response = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: buildSystemPrompt() },
-        { role: 'user', content: buildUserPrompt(cleanFaq, cleanDesign, question, history) },
+        { role: 'user', content: buildUserPrompt(faqCsv, designSpecsCsv, catalog, question, history) },
       ],
       temperature: 0.3,
       max_tokens: 400,
