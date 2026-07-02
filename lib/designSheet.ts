@@ -130,9 +130,17 @@ export async function getCalendarCatalog(): Promise<{ slug: string; name: string
   return data.catalog;
 }
 
+function safeEncodeUri(url: string): string {
+  return url.replace(/%[0-9A-Fa-f]{2}|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\s\S]/g, (match) => {
+    if (match.length === 3 && match[0] === '%') return match;
+    return encodeURI(match);
+  });
+}
+
 export async function getImageUrl(slug: string): Promise<string | null> {
   const data = await loadDesignData();
-  return data.imageMap.get(slug) ?? null;
+  const url = data.imageMap.get(slug);
+  return url ? safeEncodeUri(url) : null;
 }
 
 export async function isValidDesignSlug(slug: string): Promise<boolean> {
