@@ -12,6 +12,30 @@ const AI_TIMEOUT_MS = 12_000;
 const MAX_IMAGES = 3;
 
 const IMAGES_TAG_PATTERN = /\n?\[\[IMAGES:\s*([^\]]*)\]\]\s*$/i;
+const ORDER_TAG_PATTERN = /\n?\[\[ORDER:\s*(\{[\s\S]*?\})\s*\]\]\s*$/i;
+
+interface OrderData {
+  items?: { name: string; qty: number; price: number }[];
+  total?: number;
+  payment?: 'transfer' | 'cod';
+  name?: string;
+  phone?: string;
+  address?: string;
+}
+
+function extractOrderTag(reply: string): { text: string; order: OrderData | null } {
+  const match = reply.match(ORDER_TAG_PATTERN);
+  if (!match) return { text: reply, order: null };
+
+  const text = reply.slice(0, match.index).trim();
+  try {
+    const order = JSON.parse(match[1]) as OrderData;
+    return { text, order };
+  } catch (err) {
+    console.error('[ORDER_PARSE_FAILED]', err instanceof Error ? err.message : err);
+    return { text, order: null };
+  }
+}
 
 async function extractImageMessages(reply: string): Promise<{ text: string; images: Message[] }> {
   const match = reply.match(IMAGES_TAG_PATTERN);
@@ -37,6 +61,47 @@ async function extractImageMessages(reply: string): Promise<{ text: string; imag
   return { text, images };
 }
 
+function formatOrderMessage(order: OrderData, userId: string): string {
+  const lines: string[] = ['🛒 คำสั่งซื้อใหม่'];
+  if (order.name) lines.push(`👤 ชื่อ: ${order.name}`);
+  if (order.phone) lines.push(`📞 โทร: ${order.phone}`);
+  if (order.address) lines.push(`📍 ที่อยู่: ${order.address}`);
+  if (order.items && order.items.length) {
+    lines.push('📦 รายการ:');
+    for (const it of order.items) {
+      lines.push(`  - ${it.name} x${it.qty} = ${it.qty * it.price} บาท`);
+    }
+  }
+  if (order.total !== undefined) lines.push(`💰 ยอดรวม: ${order.total} บาท`);
+  if (order.payment) {
+    lines.push(`💳 ชำระ: ${order.payment === 'transfer' ? 'โอนเงิน' : 'เก็บปลายทาง (+30)'}`);
+  }
+  lines.push(`\nLINE User ID: ${userId}`);
+  return lines.join('\n');
+}
+
+async function pushOrderToSalesGroup(
+  client: messagingApi.MessagingApiClient,
+  order: OrderData,
+  userId: string,
+): Promise<void> {
+  const groupId = process.env.SALES_GROUP_ID;
+  if (!groupId) {
+    console.warn('[ORDER] SALES_GROUP_ID env var missing — skip push');
+    return;
+  }
+
+  try {
+    await client.pushMessage({
+      to: groupId,
+      messages: [{ type: 'text', text: formatOrderMessage(order, userId) }],
+    });
+    console.log('[ORDER_PUSHED]', { userId, total: order.total });
+  } catch (err) {
+    console.error('[ORDER_PUSH_FAILED]', err instanceof Error ? err.message : err);
+  }
+}
+
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -54,7 +119,7 @@ export async function POST(request: NextRequest) {
   const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
   if (!channelSecret || !channelAccessToken) {
-    console.error('[WEBHOOK] LINE env vars missing — LINE_CHANNEL_SECRET or LINE_CHANNEL_ACCESS_TOKEN not set');
+    console.error('[WEBHOOK] LINE env vars missing');
     return NextResponse.json({ ok: true });
   }
 
@@ -85,11 +150,15 @@ export async function POST(request: NextRequest) {
 
       if (event.type !== 'message' || event.message.type !== 'text') return;
 
+      // ตอบเฉพาะแชท 1:1 กับลูกค้า ไม่ตอบในกลุ่ม/ห้อง
+      if (event.source.type !== 'user') return;
+
       const userMessage = event.message.text;
       const replyToken = event.replyToken;
       const userId = event.source.userId ?? 'unknown';
       let text = DEFAULT_REPLY;
       let images: Message[] = [];
+      let order: OrderData | null = null;
 
       try {
         let faqCsv = '';
@@ -119,7 +188,12 @@ export async function POST(request: NextRequest) {
           'OPENAI',
         );
 
-        ({ text, images } = await extractImageMessages(rawReply));
+        // Extract ORDER tag first, then IMAGES tag
+        const orderResult = extractOrderTag(rawReply);
+        order = orderResult.order;
+        const afterOrder = orderResult.text;
+
+        ({ text, images } = await extractImageMessages(afterOrder));
         await appendHistory(userId, userMessage, text);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -137,6 +211,11 @@ export async function POST(request: NextRequest) {
         });
       } catch (err) {
         console.error('[LINE_REPLY_FAILED]', err instanceof Error ? err.message : err);
+      }
+
+      // Push order to sales group after replying customer
+      if (order) {
+        await pushOrderToSalesGroup(client, order, userId);
       }
     }),
   );

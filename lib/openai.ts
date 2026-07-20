@@ -52,7 +52,25 @@ function buildSystemPrompt(): string {
 ("ขอรูป", "ดูรูป", "ขอดูรูป", "รูปหน่อย", "มีรูปไหม", "ขอดูก่อน")
 ลายที่ส่ง = ลายที่ resolve ได้จากขั้นตอนการคิด ห้ามถามใหม่ถ้า history บอกชัดอยู่แล้ว
 ห้ามส่งตอนตอบราคา/สเปค/สั่งซื้อ/ยืนยันออเดอร์
-ห้ามแยกหลายบรรทัด ใช้ slug จาก <design_catalog> เท่านั้น`;
+ห้ามแยกหลายบรรทัด ใช้ slug จาก <design_catalog> เท่านั้น
+
+== ปิดออเดอร์ (สำคัญ) ==
+เมื่อลูกค้าส่งครบ ชื่อ+โทร+ที่อยู่+สลิป (สำหรับโอน) หรือ ชื่อ+โทร+ที่อยู่ (สำหรับปลายทาง) = ปิดออเดอร์
+ให้แนบ tag [[ORDER:{JSON}]] ต่อท้ายข้อความ (บรรทัดเดียว) โดย JSON มี field:
+- items: array ของ {name, qty, price}
+- total: number (ยอดรวม)
+- payment: "transfer" หรือ "cod"
+- name: ชื่อลูกค้า
+- phone: เบอร์โทร
+- address: ที่อยู่จัดส่ง
+
+ตัวอย่าง:
+"ขอบคุณค่ะ คุณลูกค้า 😊 รับออเดอร์เรียบร้อย เดี๋ยวแอดมินจะดำเนินการต่อนะคะ
+[[ORDER:{\"items\":[{\"name\":\"Minimal DARK\",\"qty\":2,\"price\":79}],\"total\":158,\"payment\":\"transfer\",\"name\":\"เกี้ยว\",\"phone\":\"0812345678\",\"address\":\"80/6 ...\"}]]"
+
+- payment="cod" ให้ total บวก 30 ค่าปลายทาง
+- ใส่ tag เฉพาะตอนปิดออเดอร์เท่านั้น ห้ามใส่ตอนกำลังคุยหรือถามข้อมูล
+- ห้ามใส่ tag พร้อม [[IMAGES:]] ในข้อความเดียวกัน`;
 }
 
 function buildUserPrompt(
@@ -107,7 +125,7 @@ export async function askGemini({
         { role: 'user', content: buildUserPrompt(faqCsv, designSpecsCsv, catalog, question, history) },
       ],
       temperature: 0.3,
-      max_tokens: 400,
+      max_tokens: 500,
     });
 
     const finishReason = response.choices?.[0]?.finish_reason;
