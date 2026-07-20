@@ -78,6 +78,11 @@ export async function POST(request: NextRequest) {
 
   await Promise.all(
     parsed.events.map(async (event) => {
+      console.log('[WEBHOOK_EVENT]', {
+        type: event.type,
+        source: 'source' in event ? event.source : null,
+      });
+
       if (event.type !== 'message' || event.message.type !== 'text') return;
 
       const userMessage = event.message.text;
