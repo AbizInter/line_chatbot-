@@ -61,8 +61,9 @@ async function extractImageMessages(reply: string): Promise<{ text: string; imag
   return { text, images };
 }
 
-function formatOrderMessage(order: OrderData, userId: string): string {
+function formatOrderMessage(order: OrderData, displayName: string): string {
   const lines: string[] = ['🛒 คำสั่งซื้อใหม่'];
+  lines.push(`💬 LINE: ${displayName}`);
   if (order.name) lines.push(`👤 ชื่อ: ${order.name}`);
   if (order.phone) lines.push(`📞 โทร: ${order.phone}`);
   if (order.address) lines.push(`📍 ที่อยู่: ${order.address}`);
@@ -76,7 +77,6 @@ function formatOrderMessage(order: OrderData, userId: string): string {
   if (order.payment) {
     lines.push(`💳 ชำระ: ${order.payment === 'transfer' ? 'โอนเงิน' : 'เก็บปลายทาง (+30)'}`);
   }
-  lines.push(`\nLINE User ID: ${userId}`);
   return lines.join('\n');
 }
 
@@ -91,12 +91,20 @@ async function pushOrderToSalesGroup(
     return;
   }
 
+  let displayName = 'ลูกค้า';
+  try {
+    const profile = await client.getProfile(userId);
+    if (profile.displayName) displayName = profile.displayName;
+  } catch (err) {
+    console.warn('[ORDER] Failed to get profile:', err instanceof Error ? err.message : err);
+  }
+
   try {
     await client.pushMessage({
       to: groupId,
-      messages: [{ type: 'text', text: formatOrderMessage(order, userId) }],
+      messages: [{ type: 'text', text: formatOrderMessage(order, displayName) }],
     });
-    console.log('[ORDER_PUSHED]', { userId, total: order.total });
+    console.log('[ORDER_PUSHED]', { userId, displayName, total: order.total });
   } catch (err) {
     console.error('[ORDER_PUSH_FAILED]', err instanceof Error ? err.message : err);
   }
